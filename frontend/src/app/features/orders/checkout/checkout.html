@@ -1,0 +1,113 @@
+<div class="min-h-screen bg-surface-50">
+  <app-page-header title="Finaliser la commande" (back)="goBack()"></app-page-header>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    @if (isLoading) {
+      <div class="flex justify-center py-20">
+        <div class="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Shipping form -->
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-xl shadow-card p-6 sm:p-8">
+            <h2 class="text-xl font-semibold text-secondary-800 mb-6">Informations de livraison</h2>
+            <form [formGroup]="checkoutForm" (ngSubmit)="onSubmit()" class="space-y-5">
+              <div>
+                <label class="block text-sm font-medium text-secondary-700 mb-1.5">Adresse de livraison</label>
+                <textarea formControlName="shippingAddress" rows="2" placeholder="Numéro et nom de rue"
+                  class="w-full px-4 py-2.5 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all resize-none"></textarea>
+                @if (checkoutForm.get('shippingAddress')?.hasError('required') && checkoutForm.get('shippingAddress')?.touched) {
+                  <p class="text-error-600 text-xs mt-1">L'adresse est requise</p>
+                }
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-secondary-700 mb-1.5">Ville</label>
+                  <input formControlName="shippingCity" placeholder="Paris"
+                    class="w-full px-4 py-2.5 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all">
+                  @if (checkoutForm.get('shippingCity')?.hasError('required') && checkoutForm.get('shippingCity')?.touched) {
+                    <p class="text-error-600 text-xs mt-1">La ville est requise</p>
+                  }
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-secondary-700 mb-1.5">Code postal</label>
+                  <input formControlName="shippingPostalCode" placeholder="75001"
+                    class="w-full px-4 py-2.5 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all">
+                  @if (checkoutForm.get('shippingPostalCode')?.hasError('pattern') && checkoutForm.get('shippingPostalCode')?.touched) {
+                    <p class="text-error-600 text-xs mt-1">Code postal invalide (5 chiffres)</p>
+                  }
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-secondary-700 mb-1.5">Pays</label>
+                  <input formControlName="shippingCountry"
+                    class="w-full px-4 py-2.5 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-secondary-700 mb-1.5">Téléphone</label>
+                  <input formControlName="phoneNumber" placeholder="+33612345678"
+                    class="w-full px-4 py-2.5 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all">
+                  @if (checkoutForm.get('phoneNumber')?.hasError('pattern') && checkoutForm.get('phoneNumber')?.touched) {
+                    <p class="text-error-600 text-xs mt-1">Numéro de téléphone invalide</p>
+                  }
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-secondary-700 mb-1.5">Mode de paiement</label>
+                <select formControlName="paymentMethod"
+                  class="w-full px-4 py-2.5 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all bg-white">
+                  @for (method of paymentMethods; track method.value) {
+                    <option [value]="method.value">{{ method.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-secondary-700 mb-1.5">Notes (optionnel)</label>
+                <textarea formControlName="notes" rows="2" placeholder="Instructions spéciales..."
+                  class="w-full px-4 py-2.5 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all resize-none"></textarea>
+              </div>
+
+              <div class="flex flex-col sm:flex-row gap-3 pt-4">
+                <button type="button" (click)="goBack()" class="px-6 py-3 border border-secondary-200 hover:bg-surface-100 text-secondary-600 font-medium rounded-lg transition-colors">Retour au panier</button>
+                <button type="submit" [disabled]="isSubmitting || checkoutForm.invalid"
+                  class="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  @if (isSubmitting) {
+                    <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  } @else {
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    Confirmer la commande
+                  }
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Order summary -->
+        <div class="lg:col-span-1">
+          <div class="bg-white rounded-xl shadow-card p-6 sticky top-24">
+            <h3 class="text-lg font-semibold text-secondary-800 mb-4">Récapitulatif</h3>
+            <div class="space-y-3 mb-4">
+              @for (item of cartItems; track item.productId) {
+                <div class="flex justify-between text-sm">
+                  <span class="text-secondary-600">{{ item.name }} <span class="text-secondary-400">x{{ item.quantity }}</span></span>
+                  <span class="font-medium text-secondary-800">{{ item.price * item.quantity | number:'1.2-2' }} €</span>
+                </div>
+              }
+            </div>
+            <div class="border-t border-secondary-200 pt-4 flex justify-between">
+              <span class="font-semibold text-secondary-800">Total</span>
+              <span class="text-xl font-bold text-primary-600">{{ cartTotal | number:'1.2-2' }} €</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>

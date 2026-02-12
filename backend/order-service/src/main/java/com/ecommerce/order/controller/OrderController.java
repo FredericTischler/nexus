@@ -1,0 +1,445 @@
+package com.ecommerce.order.controller;
+
+import com.ecommerce.order.dto.OrderRequest;
+import com.ecommerce.order.dto.OrderResponse;
+import com.ecommerce.order.dto.OrderSearchParams;
+import com.ecommerce.order.dto.SellerProductStats;
+import com.ecommerce.order.dto.StatusUpdateRequest;
+import com.ecommerce.order.dto.UserProductStats;
+import com.ecommerce.order.model.OrderStatus;
+import com.ecommerce.order.service.OrderService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/orders")
+@RequiredArgsConstructor
+@Slf4j
+public class OrderController {
+
+    private static final String ERROR_KEY = "error";
+    private static final String USER_ID_ATTR = "userId";
+    private static final String USER_NOT_AUTHENTICATED = "User not authenticated";
+    private static final String NOT_AUTHORIZED = "not authorized";
+
+    private final OrderService orderService;
+
+    /**
+     * Create a new order (checkout)
+     * POST /api/orders
+     */
+    @PostMapping
+    public ResponseEntity<?> createOrder(
+            @Valid @RequestBody OrderRequest request,
+            HttpServletRequest httpRequest) {
+        try {
+            String userId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+            String userName = (String) httpRequest.getAttribute("userName");
+            String userEmail = (String) httpRequest.getAttribute("userEmail");
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            OrderResponse order = orderService.createOrder(request, userId, userName, userEmail);
+            return ResponseEntity.status(HttpStatus.CREATED).body(order);
+        } catch (Exception e) {
+            log.error("Error creating order: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Get order by ID
+     * GET /api/orders/{id}
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getOrderById(
+            @PathVariable String id,
+            HttpServletRequest httpRequest) {
+        try {
+            String userId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+            String role = (String) httpRequest.getAttribute("userRole");
+            boolean isSeller = "SELLER".equals(role);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            OrderResponse order = orderService.getOrderById(id, userId, isSeller);
+            return ResponseEntity.ok(order);
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("not authorized")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of(ERROR_KEY, e.getMessage()));
+            }
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Get all orders for the authenticated user (customer)
+     * GET /api/orders/my-orders
+     */
+    @GetMapping("/my-orders")
+    public ResponseEntity<?> getMyOrders(
+            @RequestParam(required = false) OrderStatus status,
+            HttpServletRequest httpRequest) {
+        try {
+            String userId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            List<OrderResponse> orders;
+            if (status != null) {
+                orders = orderService.getOrdersByUserAndStatus(userId, status);
+            } else {
+                orders = orderService.getOrdersByUser(userId);
+            }
+            return ResponseEntity.ok(orders);
+        } catch (Exception e) {
+            log.error("Error fetching user orders: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Search and sort orders for the authenticated user
+     * GET /api/orders/my-orders/search
+     */
+    @GetMapping("/my-orders/search")
+    public ResponseEntity<?> searchMyOrders(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sortDir,
+            HttpServletRequest httpRequest) {
+        try {
+            String userId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            OrderSearchParams params = new OrderSearchParams(keyword, status, sortBy, sortDir);
+            List<OrderResponse> orders = orderService.searchOrdersByUser(userId, params);
+            return ResponseEntity.ok(orders);
+        } catch (Exception e) {
+            log.error("Error searching user orders: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Get orders for seller (orders containing their products)
+     * GET /api/orders/seller
+     */
+    @GetMapping("/seller")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<?> getSellerOrders(
+            @RequestParam(required = false) OrderStatus status,
+            HttpServletRequest httpRequest) {
+        try {
+            String sellerId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+
+            if (sellerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            List<OrderResponse> orders;
+            if (status != null) {
+                orders = orderService.getOrdersForSellerByStatus(sellerId, status);
+            } else {
+                orders = orderService.getOrdersForSeller(sellerId);
+            }
+            return ResponseEntity.ok(orders);
+        } catch (Exception e) {
+            log.error("Error fetching seller orders: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Search and sort orders for seller
+     * GET /api/orders/seller/search
+     */
+    @GetMapping("/seller/search")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<?> searchSellerOrders(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false, defaultValue = "createdAt") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sortDir,
+            HttpServletRequest httpRequest) {
+        try {
+            String sellerId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+
+            if (sellerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            OrderSearchParams params = new OrderSearchParams(keyword, status, sortBy, sortDir);
+            List<OrderResponse> orders = orderService.searchOrdersForSeller(sellerId, params);
+            return ResponseEntity.ok(orders);
+        } catch (Exception e) {
+            log.error("Error searching seller orders: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Update order status (for sellers)
+     * PUT /api/orders/{id}/status
+     */
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<?> updateOrderStatus(
+            @PathVariable String id,
+            @Valid @RequestBody StatusUpdateRequest request,
+            HttpServletRequest httpRequest) {
+        try {
+            String sellerId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+
+            if (sellerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            OrderResponse order = orderService.updateOrderStatus(id, request, sellerId);
+            return ResponseEntity.ok(order);
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("not authorized")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of(ERROR_KEY, e.getMessage()));
+            }
+            if (e.getMessage().contains("Invalid status")) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of(ERROR_KEY, e.getMessage()));
+            }
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Cancel order (for customers)
+     * PUT /api/orders/{id}/cancel
+     */
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelOrder(
+            @PathVariable String id,
+            @RequestBody(required = false) Map<String, String> body,
+            HttpServletRequest httpRequest) {
+        try {
+            String userId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            String reason = body != null ? body.get("reason") : null;
+            OrderResponse order = orderService.cancelOrder(id, userId, reason);
+            return ResponseEntity.ok(order);
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("not authorized")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of(ERROR_KEY, e.getMessage()));
+            }
+            if (e.getMessage().contains("cannot be cancelled")) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of(ERROR_KEY, e.getMessage()));
+            }
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Reorder (create new order from existing)
+     * POST /api/orders/{id}/reorder
+     */
+    @PostMapping("/{id}/reorder")
+    public ResponseEntity<?> reorder(
+            @PathVariable String id,
+            HttpServletRequest httpRequest) {
+        try {
+            String userId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+            String userName = (String) httpRequest.getAttribute("userName");
+            String userEmail = (String) httpRequest.getAttribute("userEmail");
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            OrderResponse order = orderService.reorder(id, userId, userName, userEmail);
+            return ResponseEntity.status(HttpStatus.CREATED).body(order);
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("not authorized")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of(ERROR_KEY, e.getMessage()));
+            }
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Get user order statistics
+     * GET /api/orders/stats/user
+     */
+    @GetMapping("/stats/user")
+    public ResponseEntity<?> getUserStats(HttpServletRequest httpRequest) {
+        try {
+            String userId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            OrderService.UserOrderStats stats = orderService.getUserStats(userId);
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            log.error("Error fetching user stats: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Get seller order statistics
+     * GET /api/orders/stats/seller
+     */
+    @GetMapping("/stats/seller")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<?> getSellerStats(HttpServletRequest httpRequest) {
+        try {
+            String sellerId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+
+            if (sellerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            OrderService.SellerOrderStats stats = orderService.getSellerStats(sellerId);
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            log.error("Error fetching seller stats: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Get detailed user product statistics (most purchased products)
+     * GET /api/orders/stats/user/products
+     */
+    @GetMapping("/stats/user/products")
+    public ResponseEntity<?> getUserProductStats(HttpServletRequest httpRequest) {
+        try {
+            String userId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            UserProductStats stats = orderService.getUserProductStats(userId);
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            log.error("Error fetching user product stats: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Get detailed seller product statistics (best selling products)
+     * GET /api/orders/stats/seller/products
+     */
+    @GetMapping("/stats/seller/products")
+    @PreAuthorize("hasRole('SELLER')")
+    public ResponseEntity<?> getSellerProductStats(HttpServletRequest httpRequest) {
+        try {
+            String sellerId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+
+            if (sellerId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            SellerProductStats stats = orderService.getSellerProductStats(sellerId);
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            log.error("Error fetching seller product stats: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete order (only for cancelled orders or by admin)
+     * DELETE /api/orders/{id}
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteOrder(
+            @PathVariable String id,
+            HttpServletRequest httpRequest) {
+        try {
+            String userId = (String) httpRequest.getAttribute(USER_ID_ATTR);
+
+            if (userId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of(ERROR_KEY, USER_NOT_AUTHENTICATED));
+            }
+
+            orderService.deleteOrder(id, userId);
+            return ResponseEntity.ok(Map.of("message", "Order deleted successfully"));
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("not authorized")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of(ERROR_KEY, e.getMessage()));
+            }
+            if (e.getMessage().contains("cannot be deleted")) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of(ERROR_KEY, e.getMessage()));
+            }
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(ERROR_KEY, e.getMessage()));
+        }
+    }
+
+    /**
+     * Health check endpoint
+     * GET /api/orders/health
+     */
+    @GetMapping("/health")
+    public ResponseEntity<?> health() {
+        return ResponseEntity.ok(Map.of("status", "UP", "service", "order-service"));
+    }
+}
