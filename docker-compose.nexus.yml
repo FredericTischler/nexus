@@ -23,7 +23,7 @@ services:
 
   # ===== NEXUS REPOSITORY MANAGER =====
   nexus:
-    image: sonatype/nexus3:3.68.0
+    image: sonatype/nexus3:latest   # 3.90.2 au moment du déploiement — mettre à jour régulièrement
     container_name: ecommerce-nexus
     restart: unless-stopped
     ports:
