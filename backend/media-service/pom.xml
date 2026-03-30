@@ -8,13 +8,13 @@
     <parent>
         <groupId>com.ecommerce</groupId>
         <artifactId>ecommerce-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <groupId>com.ecommerce</groupId>
     <artifactId>media-service</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0-SNAPSHOT</version>
     <name>media-service</name>
     <description>Media Service for E-commerce Platform</description>
 
