@@ -1,0 +1,62 @@
+# ===================================
+# NEXUS REPOSITORY MANAGER
+# Docker Compose Configuration
+# ===================================
+#
+# Ajoute Sonatype Nexus 3 à l'infrastructure e-commerce existante.
+# Nexus tourne avec l'user interne nexus (uid=200) — jamais root.
+#
+# Ports exposés :
+#   8091 → UI Nexus + repositories Maven (Nexus interne : 8081)
+#   5000 → Docker hosted registry (images produites)
+#   5001 → Docker proxy registry  (cache Docker Hub)
+#   5002 → Docker group registry  (point d'entrée unique)
+#
+# Usage :
+#   Démarrer : docker compose -f docker-compose.nexus.yml up -d
+#   Arrêter  : docker compose -f docker-compose.nexus.yml down
+#   Logs     : docker compose -f docker-compose.nexus.yml logs -f nexus
+#   Password : docker exec ecommerce-nexus cat /nexus-data/admin.password
+#
+
+services:
+
+  # ===== NEXUS REPOSITORY MANAGER =====
+  nexus:
+    image: sonatype/nexus3:3.68.0
+    container_name: ecommerce-nexus
+    restart: unless-stopped
+    ports:
+      - "8091:8081"   # UI Nexus + Maven repos  (8081 réservé à user-service en local)
+      - "5000:5000"   # Docker hosted registry
+      - "5001:5001"   # Docker proxy registry
+      - "5002:5002"   # Docker group registry
+    environment:
+      # Mémoire JVM : adaptable selon la machine
+      INSTALL4J_ADD_VM_PARAMS: >-
+        -Xms512m
+        -Xmx2g
+        -XX:MaxDirectMemorySize=2g
+        -Djava.util.prefs.userRoot=/nexus-data/javaprefs
+    volumes:
+      # Données persistantes : repositories, config, blobs
+      - nexus_data:/nexus-data
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/service/rest/v1/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s   # Nexus est lent au premier démarrage
+
+# ===== NETWORKS =====
+networks:
+  ecommerce-network:
+    external: true
+    name: safe-zone_ecommerce-network
+
+# ===== VOLUMES =====
+volumes:
+  nexus_data:
+    driver: local
