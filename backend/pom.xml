@@ -51,6 +51,11 @@
     </properties>
 
     <!-- ===== NEXUS : Publication des artefacts ===== -->
+    <!-- Noms réels des repos Nexus 3.90.2 (defaults conservés) :       -->
+    <!--   hosted releases  → maven-releases  (identique au plan)       -->
+    <!--   hosted snapshots → maven-snapshots (identique au plan)       -->
+    <!--   proxy central    → maven-central   (plan : maven-central-proxy) -->
+    <!--   group            → maven-public    (plan : maven-group)      -->
     <distributionManagement>
         <repository>
             <id>nexus-releases</id>
