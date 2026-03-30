@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  settings.xml — Configuration Maven pour Nexus Repository Manager
+  =================================================================
+  Usage local  : cp settings.xml ~/.m2/settings.xml
+                 export NEXUS_PASSWORD='tonmotdepasse'
+  Usage CI     : mvn ... -s settings.xml   (NEXUS_PASSWORD injecté par Jenkins)
+  Usage Docker : COPY settings.xml /root/.m2/settings.xml dans le Dockerfile
+
+  Repos Nexus utilisés (noms réels Nexus 3.90.2) :
+    mirror  → maven-public    (group : releases + snapshots + central)
+    deploy  → maven-releases  (hosted, RELEASE)
+    deploy  → maven-snapshots (hosted, SNAPSHOT)
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+          https://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <!-- ===== CREDENTIALS ===== -->
+  <!-- Le mot de passe est lu depuis la variable d'environnement NEXUS_PASSWORD -->
+  <!-- Ne jamais écrire le mot de passe en dur dans ce fichier               -->
+  <servers>
+
+    <!-- Lecture via le mirror (accès anonyme désactivé) -->
+    <server>
+      <id>nexus-mirror</id>
+      <username>admin</username>
+      <password>${env.NEXUS_PASSWORD}</password>
+    </server>
+
+    <!-- Publication des RELEASE (mvn deploy sur branche release) -->
+    <server>
+      <id>nexus-releases</id>
+      <username>admin</username>
+      <password>${env.NEXUS_PASSWORD}</password>
+    </server>
+
+    <!-- Publication des SNAPSHOT (mvn deploy sur branche dev) -->
+    <server>
+      <id>nexus-snapshots</id>
+      <username>admin</username>
+      <password>${env.NEXUS_PASSWORD}</password>
+    </server>
+
+  </servers>
+
+  <!-- ===== MIRROR ===== -->
+  <!-- Tout téléchargement Maven est redirigé vers Nexus (même Maven Central) -->
+  <mirrors>
+    <mirror>
+      <id>nexus-mirror</id>
+      <mirrorOf>*</mirrorOf>
+      <url>http://localhost:8091/repository/maven-public/</url>
+    </mirror>
+  </mirrors>
+
+  <!-- ===== PROFIL NEXUS ===== -->
+  <profiles>
+    <profile>
+      <id>nexus</id>
+      <repositories>
+        <repository>
+          <id>nexus-public</id>
+          <url>http://localhost:8091/repository/maven-public/</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>nexus-public</id>
+          <url>http://localhost:8091/repository/maven-public/</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+
+  <activeProfiles>
+    <activeProfile>nexus</activeProfile>
+  </activeProfiles>
+
+</settings>
