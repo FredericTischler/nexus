@@ -766,20 +766,20 @@ Le script utilise l'API REST Nexus pour créer rôles et utilisateurs (idempoten
 ```bash
 # Test 1 : dev-user peut LIRE (200 attendu)
 curl -s -o /dev/null -w "%{http_code}" \
-  -u "dev-user:Dev@Read2024!" \
+  -u "dev-user:$DEV_USER_PASSWORD" \
   "http://localhost:8091/repository/maven-public/"
 # → 200 ✓
 
 # Test 2 : dev-user ne peut PAS déployer en releases (403 attendu)
 curl -s -o /dev/null -w "%{http_code}" \
-  -u "dev-user:Dev@Read2024!" -X PUT \
+  -u "dev-user:$DEV_USER_PASSWORD" -X PUT \
   --data-binary "test" \
   "http://localhost:8091/repository/maven-releases/com/test/test/1.0/test-1.0.jar"
 # → 403 ✓
 
 # Test 3 : ci-deployer peut déployer en releases (201 attendu)
 curl -s -o /dev/null -w "%{http_code}" \
-  -u "ci-deployer:Ci@Deploy2024!" -X PUT \
+  -u "ci-deployer:$CI_DEPLOYER_PASSWORD" -X PUT \
   --data-binary "test" \
   "http://localhost:8091/repository/maven-releases/com/test/test/1.0/test-1.0.jar"
 # → 201 ✓

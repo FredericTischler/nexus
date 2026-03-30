@@ -2,8 +2,10 @@
 # scripts/setup-nexus-rbac.sh — Configurer les rôles et utilisateurs Nexus (RBAC)
 # Usage: ./scripts/setup-nexus-rbac.sh
 #
-# Prérequis : NEXUS_PASSWORD (admin) doit être défini
-#   export NEXUS_PASSWORD="<mot-de-passe>"
+# Prérequis : les 3 variables doivent être définies
+#   export NEXUS_PASSWORD="<mot-de-passe-admin>"
+#   export CI_DEPLOYER_PASSWORD="<mot-de-passe-ci-deployer>"
+#   export DEV_USER_PASSWORD="<mot-de-passe-dev-user>"
 
 set -e
 
@@ -13,6 +15,9 @@ if [[ -z "$NEXUS_PASSWORD" ]]; then
   echo "ERREUR: NEXUS_PASSWORD non défini."
   exit 1
 fi
+
+CI_DEPLOYER_PASSWORD="${CI_DEPLOYER_PASSWORD:?"Définir CI_DEPLOYER_PASSWORD (mot de passe pour ci-deployer)"}"
+DEV_USER_PASSWORD="${DEV_USER_PASSWORD:?"Définir DEV_USER_PASSWORD (mot de passe pour dev-user)"}"
 
 AUTH="admin:${NEXUS_PASSWORD}"
 
@@ -84,7 +89,7 @@ curl -sf -u "$AUTH" -X POST \
     "firstName": "CI",
     "lastName": "Deployer",
     "emailAddress": "ci@ecommerce.local",
-    "password": "Ci@Deploy2024!",
+    "password": "'"$CI_DEPLOYER_PASSWORD"'",
     "status": "active",
     "roles": ["deployer-role"]
   }' && echo "OK ci-deployer" || echo "ci-deployer existe déjà"
@@ -97,12 +102,12 @@ curl -sf -u "$AUTH" -X POST \
     "firstName": "Developer",
     "lastName": "User",
     "emailAddress": "dev@ecommerce.local",
-    "password": "Dev@Read2024!",
+    "password": "'"$DEV_USER_PASSWORD"'",
     "status": "active",
     "roles": ["developer-role"]
   }' && echo "OK dev-user" || echo "dev-user existe déjà"
 
 echo ""
 echo "=== RBAC configuré ==="
-echo "  ci-deployer / Ci@Deploy2024!  → deployer-role"
-echo "  dev-user    / Dev@Read2024!   → developer-role"
+echo "  ci-deployer / \$CI_DEPLOYER_PASSWORD  → deployer-role"
+echo "  dev-user    / \$DEV_USER_PASSWORD    → developer-role"
