@@ -5,7 +5,9 @@ pipeline {
 	}
     environment {
         EMAIL_RECIPIENTS = 'frederic.tischler2@gmail.com'
-        DEMO_API_TOKEN = credentials('demo-api-token')
+        DEMO_API_TOKEN   = credentials('demo-api-token')
+        NEXUS_PASSWORD   = credentials('nexus-admin-password')
+        NEXUS_REGISTRY   = 'localhost:5000'
     }
 
     stages {
@@ -17,48 +19,14 @@ pipeline {
         stage('Build_Backend') {
             steps {
                 dir('backend') {
-                    sh '''#!/bin/bash
-set -euo pipefail
-shopt -s nullglob
-modules=()
-for pom in */pom.xml; do
-    modules+=("${pom%/pom.xml}")
-done
-
-if [ ${#modules[@]} -eq 0 ]; then
-    echo "No Maven modules found under backend/" >&2
-    exit 1
-fi
-
-for module in "${modules[@]}"; do
-    echo "Building backend module: ${module}"
-    (cd "${module}" && mvn -B clean package -DskipTests)
-done
-'''
+                    sh 'mvn -B clean package -DskipTests -s ../settings.xml'
                 }
             }
         }
         stage('Test_Backend') {
             steps {
                 dir('backend') {
-                    sh '''#!/bin/bash
-set -euo pipefail
-shopt -s nullglob
-modules=()
-for pom in */pom.xml; do
-    modules+=("${pom%/pom.xml}")
-done
-
-if [ ${#modules[@]} -eq 0 ]; then
-    echo "No Maven modules found under backend/" >&2
-    exit 1
-fi
-
-for module in "${modules[@]}"; do
-    echo "Running tests for backend module: ${module}"
-    (cd "${module}" && mvn -B test)
-done
-'''
+                    sh 'mvn -B test -s ../settings.xml'
                 }
             }
         }
@@ -74,6 +42,39 @@ done
             steps {
                 dir('frontend') {
                     sh 'npm test -- --watch=false --browsers=ChromeHeadless'
+                }
+            }
+        }
+        stage('Publish_Maven_Artifacts') {
+            steps {
+                dir('backend') {
+                    sh 'mvn -B deploy -DskipTests -s ../settings.xml'
+                }
+            }
+        }
+        stage('Build_Push_Docker_Images') {
+            steps {
+                script {
+                    def imageVersion = sh(
+                        returnStdout: true,
+                        script: 'cd backend && mvn help:evaluate -Dexpression=project.version -q -DforceStdout -s ../settings.xml'
+                    ).trim() + "-${env.BUILD_NUMBER}"
+
+                    sh "echo \"\$NEXUS_PASSWORD\" | docker login \"\$NEXUS_REGISTRY\" -u admin --password-stdin"
+
+                    ['user-service', 'product-service', 'media-service', 'order-service'].each { svc ->
+                        sh """
+                            docker build \\
+                                --network=host \\
+                                --build-arg NEXUS_PASSWORD="\$NEXUS_PASSWORD" \\
+                                -f backend/${svc}/Dockerfile \\
+                                -t "\$NEXUS_REGISTRY/ecommerce/${svc}:${imageVersion}" \\
+                                -t "\$NEXUS_REGISTRY/ecommerce/${svc}:latest" \\
+                                .
+                            docker push "\$NEXUS_REGISTRY/ecommerce/${svc}:${imageVersion}"
+                            docker push "\$NEXUS_REGISTRY/ecommerce/${svc}:latest"
+                        """
+                    }
                 }
             }
         }
@@ -142,6 +143,7 @@ Job      : ${env.JOB_NAME}
 Build    : #${env.BUILD_NUMBER}
 Result   : ${currentBuild.currentResult}
 URL      : ${env.BUILD_URL}
+Nexus    : http://localhost:8091
 """
             )
         }
