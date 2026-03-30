@@ -1,0 +1,8 @@
+# Build context = project root (.)
+frontend/
+docs/
+.git/
+backend/*/target/
+.idea/
+*.iml
+.env

@@ -74,8 +74,11 @@ services:
   # ===== USER SERVICE =====
   user-service:
     build:
-      context: ./backend/user-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/user-service/Dockerfile
+      network: host
+      args:
+        NEXUS_PASSWORD: ${NEXUS_PASSWORD:-}
     container_name: ecommerce-user-service
     restart: unless-stopped
     ports:
@@ -98,8 +101,11 @@ services:
   # ===== PRODUCT SERVICE =====
   product-service:
     build:
-      context: ./backend/product-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/product-service/Dockerfile
+      network: host
+      args:
+        NEXUS_PASSWORD: ${NEXUS_PASSWORD:-}
     container_name: ecommerce-product-service
     restart: unless-stopped
     ports:
@@ -122,8 +128,11 @@ services:
   # ===== MEDIA SERVICE =====
   media-service:
     build:
-      context: ./backend/media-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/media-service/Dockerfile
+      network: host
+      args:
+        NEXUS_PASSWORD: ${NEXUS_PASSWORD:-}
     container_name: ecommerce-media-service
     restart: unless-stopped
     ports:
@@ -149,8 +158,11 @@ services:
   # ===== ORDER SERVICE =====
   order-service:
     build:
-      context: ./backend/order-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/order-service/Dockerfile
+      network: host
+      args:
+        NEXUS_PASSWORD: ${NEXUS_PASSWORD:-}
     container_name: ecommerce-order-service
     restart: unless-stopped
     ports:
