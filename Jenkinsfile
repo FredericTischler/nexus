@@ -8,6 +8,16 @@ pipeline {
         DEMO_API_TOKEN   = credentials('demo-api-token')
         NEXUS_PASSWORD   = credentials('nexus-admin-password')
         NEXUS_REGISTRY   = 'localhost:5000'
+
+        // Docker Compose deploy variables
+        MONGODB_ROOT_USERNAME          = credentials('mongodb-root-username')
+        MONGODB_ROOT_PASSWORD          = credentials('mongodb-root-password')
+        USER_SERVICE_MONGODB_URI       = credentials('user-service-mongodb-uri')
+        PRODUCT_SERVICE_MONGODB_URI    = credentials('product-service-mongodb-uri')
+        MEDIA_SERVICE_MONGODB_URI      = credentials('media-service-mongodb-uri')
+        ORDER_SERVICE_MONGODB_URI      = credentials('order-service-mongodb-uri')
+        JWT_SECRET                     = credentials('jwt-secret')
+        SERVER_SSL_KEY_STORE_PASSWORD  = credentials('ssl-keystore-password')
     }
 
     stages {
