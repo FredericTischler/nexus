@@ -222,18 +222,6 @@ describe('Checkout', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/cart']);
   });
 
-  it('should navigate to products', () => {
-    component.goToProducts();
-
-    expect(router.navigate).toHaveBeenCalledWith(['/products']);
-  });
-
-  it('should navigate to profile', () => {
-    component.goToProfile();
-
-    expect(router.navigate).toHaveBeenCalledWith(['/profile']);
-  });
-
   it('should have COD as payment method option', () => {
     expect(component.paymentMethods).toContain(
       jasmine.objectContaining({ value: 'COD' })

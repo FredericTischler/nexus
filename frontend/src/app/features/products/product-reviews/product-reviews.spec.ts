@@ -116,13 +116,6 @@ describe('ProductReviews', () => {
     expect(component.hoverRating).toBe(0);
   });
 
-  it('should return correct star class', () => {
-    component.rating = 3;
-    component.hoverRating = 0;
-    expect(component.getStarClass(3)).toBe('star-filled');
-    expect(component.getStarClass(4)).toBe('star-empty');
-  });
-
   it('should show snackbar when submitting without rating', () => {
     component.rating = 0;
     component.comment = 'Some comment';

@@ -167,17 +167,6 @@ describe('UserProfile', () => {
     expect(component.getRoleDisplay()).toBe('');
   });
 
-  it('should return correct role icon', () => {
-    component.user = mockUser;
-    expect(component.getRoleIcon()).toBe('shopping_bag');
-
-    component.user = { ...mockUser, role: 'SELLER' };
-    expect(component.getRoleIcon()).toBe('storefront');
-
-    component.user = null;
-    expect(component.getRoleIcon()).toBe('person');
-  });
-
   it('should format date correctly', () => {
     const date = new Date('2024-01-15');
     const formatted = component.formatDate(date);

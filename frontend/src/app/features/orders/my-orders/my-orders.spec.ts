@@ -4,25 +4,19 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { MyOrders } from './my-orders';
 import { OrderService } from '../../../core/services/order';
-import { Auth } from '../../../core/services/auth';
-import { Cart } from '../../../core/services/cart';
 import { Order, OrderStatus } from '../../../core/models/order.model';
-import { CartItem } from '../../../core/models/cart.model';
 
 describe('MyOrders', () => {
   let component: MyOrders;
   let fixture: ComponentFixture<MyOrders>;
   let orderService: jasmine.SpyObj<OrderService>;
-  let authService: jasmine.SpyObj<Auth>;
-  let cartService: jasmine.SpyObj<Cart>;
   let router: Router;
   let snackBar: jasmine.SpyObj<MatSnackBar>;
-  let cartStream: BehaviorSubject<CartItem[]>;
 
   const mockOrders: Order[] = [
     {
@@ -60,8 +54,6 @@ describe('MyOrders', () => {
   ];
 
   beforeEach(async () => {
-    cartStream = new BehaviorSubject<CartItem[]>([]);
-
     snackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
 
     orderService = jasmine.createSpyObj<OrderService>('OrderService', [
@@ -86,12 +78,6 @@ describe('MyOrders', () => {
     });
     orderService.getStatusColor.and.returnValue('primary');
 
-    authService = jasmine.createSpyObj<Auth>('Auth', ['logout']);
-
-    cartService = jasmine.createSpyObj<Cart>('Cart', ['getCartCount']);
-    cartService.cartItems$ = cartStream.asObservable();
-    cartService.getCartCount.and.returnValue(0);
-
     await TestBed.configureTestingModule({
       imports: [
         MyOrders,
@@ -102,8 +88,6 @@ describe('MyOrders', () => {
       ],
       providers: [
         { provide: OrderService, useValue: orderService },
-        { provide: Auth, useValue: authService },
-        { provide: Cart, useValue: cartService },
         { provide: MatSnackBar, useValue: snackBar }
       ]
     }).compileComponents();
@@ -250,30 +234,5 @@ describe('MyOrders', () => {
   it('should navigate to products', () => {
     component.goToProducts();
     expect(router.navigate).toHaveBeenCalledWith(['/products']);
-  });
-
-  it('should navigate to cart', () => {
-    component.goToCart();
-    expect(router.navigate).toHaveBeenCalledWith(['/cart']);
-  });
-
-  it('should navigate to profile', () => {
-    component.goToProfile();
-    expect(router.navigate).toHaveBeenCalledWith(['/profile']);
-  });
-
-  it('should logout and navigate to login', () => {
-    component.logout();
-
-    expect(authService.logout).toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/login']);
-  });
-
-  it('should update cart count', () => {
-    cartService.getCartCount.and.returnValue(5);
-
-    component.updateCartCount();
-
-    expect(component.cartCount).toBe(5);
   });
 });

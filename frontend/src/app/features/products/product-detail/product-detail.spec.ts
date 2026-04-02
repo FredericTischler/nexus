@@ -331,17 +331,17 @@ describe('ProductDetail', () => {
     expect(component.stockStatus).toBe('');
   });
 
-  it('should return correct stock status class', () => {
+  it('should return correct stock color class', () => {
     component.product = { ...mockProduct, stock: 0 };
-    expect(component.stockStatusClass).toBe('out-of-stock');
+    expect(component.stockColorClass).toBe('bg-error-50 text-error-700');
 
     component.product = { ...mockProduct, stock: 5 };
-    expect(component.stockStatusClass).toBe('low-stock');
+    expect(component.stockColorClass).toBe('bg-warning-50 text-warning-700');
 
     component.product = { ...mockProduct, stock: 15 };
-    expect(component.stockStatusClass).toBe('in-stock');
+    expect(component.stockColorClass).toBe('bg-success-50 text-success-700');
 
     component.product = null;
-    expect(component.stockStatusClass).toBe('');
+    expect(component.stockColorClass).toBe('');
   });
 });

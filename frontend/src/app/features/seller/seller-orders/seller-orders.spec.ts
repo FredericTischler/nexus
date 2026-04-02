@@ -224,12 +224,6 @@ describe('SellerOrders', () => {
     expect(component.canUpdateStatus(deliveredOrder)).toBeFalse();
   });
 
-  it('should get correct status icon', () => {
-    expect(component.getStatusIcon(OrderStatus.PENDING)).toBe('hourglass_empty');
-    expect(component.getStatusIcon(OrderStatus.SHIPPED)).toBe('local_shipping');
-    expect(component.getStatusIcon(OrderStatus.DELIVERED)).toBe('done_all');
-  });
-
   it('should format date correctly', () => {
     const date = new Date('2024-01-15T10:30:00');
     const formatted = component.formatDate(date);

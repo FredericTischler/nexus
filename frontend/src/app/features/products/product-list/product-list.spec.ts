@@ -10,7 +10,6 @@ import { ProductList } from './product-list';
 import { Product as ProductService } from '../../../core/services/product';
 import { MediaService } from '../../../core/services/media';
 import { Cart } from '../../../core/services/cart';
-import { Auth } from '../../../core/services/auth';
 import { WishlistService } from '../../../core/services/wishlist';
 import { Product as ProductModel, Page } from '../../../core/models/product.model';
 import { Media } from '../../../core/models/media.model';
@@ -34,7 +33,6 @@ describe('ProductList', () => {
   let productService: jasmine.SpyObj<ProductService>;
   let mediaService: jasmine.SpyObj<MediaService>;
   let cartService: Cart;
-  let authService: jasmine.SpyObj<Auth>;
   let wishlistService: jasmine.SpyObj<WishlistService>;
   let snackBar: jasmine.SpyObj<MatSnackBar>;
   let router: Router;
@@ -44,7 +42,6 @@ describe('ProductList', () => {
   beforeEach(async () => {
     productService = jasmine.createSpyObj<ProductService>('Product', ['getAllProducts', 'searchProducts', 'filterProducts']);
     mediaService = jasmine.createSpyObj<MediaService>('MediaService', ['getMediaByProduct', 'getImageUrl']);
-    authService = jasmine.createSpyObj<Auth>('Auth', ['logout']);
     snackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
     cartStream = new BehaviorSubject<any[]>([]);
     wishlistStream = new BehaviorSubject<string[]>([]);
@@ -79,7 +76,6 @@ describe('ProductList', () => {
         { provide: ProductService, useValue: productService },
         { provide: MediaService, useValue: mediaService },
         { provide: Cart, useValue: cartService },
-        { provide: Auth, useValue: authService },
         { provide: WishlistService, useValue: wishlistService },
         { provide: MatSnackBar, useValue: snackBar },
       ],
@@ -139,7 +135,7 @@ describe('ProductList', () => {
   });
 
   it('should prevent adding out-of-stock items', () => {
-    component.addToCart({ id: '1', name: 'Phone', stock: 0, sellerId: 'seller-1', sellerName: 'Test Seller' });
+    component.addToCart({ id: '1', name: 'Phone', description: 'desc', category: 'cat', price: 100, stock: 0, sellerId: 'seller-1', sellerName: 'Test Seller' });
     expect((cartService.addToCart as jasmine.Spy).calls.count()).toBe(0);
   });
 
@@ -154,28 +150,19 @@ describe('ProductList', () => {
       sellerName: 'Test Seller',
     };
     const getCartItemsSpy = spyOn(cartService, 'getCartItems').and.returnValue([cartItem]);
-    component.addToCart({ id: '1', name: 'Phone', stock: 2, sellerId: 'seller-1', sellerName: 'Test Seller' });
+    component.addToCart({ id: '1', name: 'Phone', description: 'desc', category: 'cat', price: 100, stock: 2, sellerId: 'seller-1', sellerName: 'Test Seller' });
     expect(getCartItemsSpy).toHaveBeenCalled();
     expect((cartService.addToCart as jasmine.Spy).calls.count()).toBe(0);
   });
 
   it('should add to cart and offer navigation', () => {
-    component.addToCart({ id: '1', name: 'Phone', stock: 5, price: 100, sellerId: 'seller-1', sellerName: 'Test Seller' });
+    component.addToCart({ id: '1', name: 'Phone', description: 'desc', category: 'cat', stock: 5, price: 100, sellerId: 'seller-1', sellerName: 'Test Seller' });
     expect((cartService.addToCart as jasmine.Spy).calls.any()).toBeTrue();
   });
 
-  it('should logout and redirect', () => {
-    component.logout();
-    expect(authService.logout).toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/login']);
-  });
-
-  it('should navigate to product details and cart', () => {
+  it('should navigate to product details', () => {
     component.viewDetails('1');
     expect(router.navigate).toHaveBeenCalledWith(['/products', '1']);
-
-    component.goToCart();
-    expect(router.navigate).toHaveBeenCalledWith(['/cart']);
   });
 
   it('should handle error when loading products', () => {
@@ -223,23 +210,15 @@ describe('ProductList', () => {
     };
     snackBar.open.and.returnValue(snackBarRef as any);
 
-    component.addToCart({ id: '1', name: 'Phone', stock: 5, price: 100, imageUrl: null, sellerId: 'seller-1', sellerName: 'Test Seller' });
+    component.addToCart({ id: '1', name: 'Phone', description: 'desc', category: 'cat', stock: 5, price: 100, sellerId: 'seller-1', sellerName: 'Test Seller' });
 
     expect((cartService.addToCart as jasmine.Spy)).toHaveBeenCalled();
-  });
-
-  it('should update cart count from cart items subscription', () => {
-    spyOn(cartService, 'getCartCount').and.returnValue(3);
-
-    cartStream.next([{ productId: '1', quantity: 1, name: 'Test', price: 100, imageUrl: null, sellerId: 'seller-1', sellerName: 'Test Seller' }]);
-
-    expect(component.cartCount).toBe(3);
   });
 
   it('should update page on paginator change', () => {
     productService.filterProducts.and.returnValue(of(makePage([])));
 
-    component.onPageChange({ pageIndex: 2, pageSize: 24, length: 100 });
+    component.onPageChange({ pageIndex: 2, pageSize: 24 });
 
     expect(component.pageIndex).toBe(2);
     expect(component.pageSize).toBe(24);

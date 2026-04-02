@@ -251,7 +251,4 @@ describe('Dashboard', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 
-  it('should have correct displayed columns', () => {
-    expect(component.displayedColumns).toEqual(['name', 'category', 'price', 'stock', 'actions']);
-  });
 });

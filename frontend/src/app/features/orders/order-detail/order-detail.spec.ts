@@ -4,24 +4,20 @@ import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { OrderDetail } from './order-detail';
 import { OrderService } from '../../../core/services/order';
-import { Cart } from '../../../core/services/cart';
 import { Order, OrderStatus } from '../../../core/models/order.model';
-import { CartItem } from '../../../core/models/cart.model';
 
 describe('OrderDetail', () => {
   let component: OrderDetail;
   let fixture: ComponentFixture<OrderDetail>;
   let orderService: jasmine.SpyObj<OrderService>;
-  let cartService: jasmine.SpyObj<Cart>;
   let router: Router;
   let location: jasmine.SpyObj<Location>;
   let snackBar: jasmine.SpyObj<MatSnackBar>;
-  let cartStream: BehaviorSubject<CartItem[]>;
 
   const mockOrder: Order = {
     id: 'order-1',
@@ -46,8 +42,6 @@ describe('OrderDetail', () => {
   };
 
   beforeEach(async () => {
-    cartStream = new BehaviorSubject<CartItem[]>([]);
-
     snackBar = jasmine.createSpyObj<MatSnackBar>('MatSnackBar', ['open']);
     location = jasmine.createSpyObj<Location>('Location', ['back']);
 
@@ -73,10 +67,6 @@ describe('OrderDetail', () => {
     });
     orderService.getStatusColor.and.returnValue('primary');
 
-    cartService = jasmine.createSpyObj<Cart>('Cart', ['getCartCount']);
-    cartService.cartItems$ = cartStream.asObservable();
-    cartService.getCartCount.and.returnValue(0);
-
     await TestBed.configureTestingModule({
       imports: [
         OrderDetail,
@@ -86,7 +76,6 @@ describe('OrderDetail', () => {
       ],
       providers: [
         { provide: OrderService, useValue: orderService },
-        { provide: Cart, useValue: cartService },
         { provide: Location, useValue: location },
         { provide: MatSnackBar, useValue: snackBar },
         {
@@ -253,32 +242,9 @@ describe('OrderDetail', () => {
     expect(component.formatDate(undefined)).toBe('-');
   });
 
-  it('should navigate to products', () => {
-    component.goToProducts();
-    expect(router.navigate).toHaveBeenCalledWith(['/products']);
-  });
-
-  it('should navigate to cart', () => {
-    component.goToCart();
-    expect(router.navigate).toHaveBeenCalledWith(['/cart']);
-  });
-
-  it('should navigate to profile', () => {
-    component.goToProfile();
-    expect(router.navigate).toHaveBeenCalledWith(['/profile']);
-  });
-
   it('should go back using location', () => {
     component.goBack();
     expect(location.back).toHaveBeenCalled();
-  });
-
-  it('should update cart count', () => {
-    cartService.getCartCount.and.returnValue(3);
-
-    component.updateCartCount();
-
-    expect(component.cartCount).toBe(3);
   });
 
   it('should have correct status steps defined', () => {
