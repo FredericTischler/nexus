@@ -105,7 +105,7 @@ docker exec ecommerce-nexus cat /nexus-data/admin.password
 3. Suivre l'assistant de setup (changer le mot de passe, désactiver l'accès anonyme)
 
 ![Interface Nexus — page d'accueil](docs/screenshots/nexus-home.png)
-*Capture : tableau de bord Nexus avec les repositories listés dans la barre gauche*
+*Capture : tableau de bord Nexus avec les repositories listés*
 
 ### 1.4 Vérification de l'utilisateur non-root
 
@@ -165,9 +165,6 @@ curl -u "admin:$NEXUS_PASS" -X POST \
     "docker": {"v1Enabled": false, "forceBasicAuth": true, "httpPort": 5000}
   }'
 ```
-
-![Liste des repositories Docker dans Nexus](docs/screenshots/nexus-docker-repos.png)
-*Capture : les 3 repositories Docker avec leurs ports respectifs*
 
 ### 2.3 Vérification via l'API
 
@@ -429,9 +426,6 @@ curl -s -u "admin:$NEXUS_PASSWORD" \
   "http://localhost:8091/service/rest/v1/search?repository=maven-releases&group=com.ecommerce" \
   | python3 -c "import sys,json; [print(v['name'], v['version']) for v in json.load(sys.stdin)['items']]"
 ```
-
-![Comparaison SNAPSHOT et RELEASE dans Nexus](docs/screenshots/nexus-snapshot-vs-release.png)
-*Capture : Browse côte à côte — maven-snapshots (builds timestampés) et maven-releases (version stable)*
 
 ### 5.5 Récupérer une version spécifique
 
